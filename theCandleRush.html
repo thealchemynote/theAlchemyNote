@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Candle Rush</title>
+<style>
+  :root{
+    --bg:#050507;--panel:#111119;--gold:#d9b54a;--gold2:#fff0a6;
+    --red:#ff3b4f;--green:#19e68c;--blue:#6cb6ff;--text:#f5f2df;--muted:#9b9ba8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(217,181,74,.18), transparent 28%),
+      radial-gradient(circle at 80% 20%, rgba(255,59,79,.12), transparent 26%),
+      linear-gradient(180deg,#07070b 0%,#030304 100%);
+    color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden;
+  }
+  .app{width:min(1220px,100vw);height:100vh;margin:0 auto;padding:18px;display:grid;grid-template-rows:auto 1fr auto;gap:12px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .logo h1{margin:0;letter-spacing:.12em;font-size:clamp(25px,4vw,56px);color:var(--gold2);text-shadow:0 0 12px rgba(217,181,74,.55),0 0 36px rgba(217,181,74,.18)}
+  .logo .sub{margin-top:6px;color:var(--muted);letter-spacing:.18em;font-size:12px;text-transform:uppercase}
+  .stats{display:grid;grid-template-columns:repeat(4,minmax(105px,1fr));gap:8px;min-width:min(640px,58vw)}
+  .stat{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(217,181,74,.24);border-radius:14px;padding:10px 12px;box-shadow:inset 0 0 18px rgba(255,255,255,.025)}
+  .stat small{display:block;color:var(--muted);font-size:11px;letter-spacing:.12em}.stat b{display:block;margin-top:4px;font-size:17px;color:#fff}
+  main{position:relative;display:grid;grid-template-columns:1fr 310px;gap:12px;min-height:0}
+  .chartPanel,.sidePanel{background:linear-gradient(180deg,rgba(17,17,25,.96),rgba(8,8,12,.96));border:1px solid rgba(217,181,74,.22);border-radius:20px;box-shadow:0 16px 60px rgba(0,0,0,.35),inset 0 0 30px rgba(255,255,255,.025);overflow:hidden}
+  .chartPanel{position:relative}canvas{display:block;width:100%;height:100%}
+  .ticker{position:absolute;top:12px;left:14px;display:flex;gap:8px;align-items:center;color:#fff;font-weight:800;letter-spacing:.08em;z-index:3;flex-wrap:wrap}
+  .pill{padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
+  .sidePanel{padding:14px;display:flex;flex-direction:column;gap:12px}
+  .machine{border-radius:18px;border:1px solid rgba(217,181,74,.22);background:linear-gradient(135deg,rgba(217,181,74,.12),transparent 35%),#0c0c12;padding:14px;min-height:118px}
+  .machine h2{margin:0 0 8px;font-size:18px;color:var(--gold2);letter-spacing:.08em}
+  .message{min-height:50px;color:#fff;font-size:14px;line-height:1.45}.meter{height:10px;background:#050508;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
+  .meter span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--gold2),var(--red));transition:.25s}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  button{border:0;cursor:pointer;border-radius:16px;padding:14px 8px;color:#fff;font-size:19px;font-weight:900;letter-spacing:.08em;box-shadow:0 10px 0 rgba(0,0,0,.25),0 0 22px rgba(255,255,255,.06);transition:.08s transform,.08s box-shadow,.18s filter}
+  button:active{transform:translateY(4px);box-shadow:0 5px 0 rgba(0,0,0,.3)}button:disabled{opacity:.45;filter:grayscale(1);cursor:not-allowed}
+  #longBtn{background:linear-gradient(180deg,#22f19a,#087a4e)}#shortBtn{background:linear-gradient(180deg,#ff5363,#991629)}
+  #closeBtn{background:linear-gradient(180deg,#fff0a6,#a87813);color:#1b1200;grid-column:1/3}
+  #startBtn,#restartBtn,#clearScoresBtn{background:linear-gradient(180deg,var(--gold2),#a87813);color:#1b1200;width:100%;margin-top:12px}
+  #clearScoresBtn{font-size:13px;padding:10px;margin-top:8px;background:linear-gradient(180deg,#777,#333);color:#fff}
+  .log{flex:1;overflow:auto;padding-right:4px;color:var(--muted);font-size:12px;line-height:1.5;min-height:80px}
+  .log div{padding:7px 8px;margin-bottom:6px;background:rgba(255,255,255,.035);border-radius:10px}
+  .rankBox{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px;background:rgba(255,255,255,.035)}
+  .rankBox h3{margin:0 0 8px;color:var(--gold2);font-size:14px;letter-spacing:.08em}
+  .rankBox ol{margin:0;padding-left:22px;font-size:12px;color:#ddd}.rankBox li{margin:4px 0}
+  footer{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--muted);font-size:12px}
+  .overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at center,rgba(217,181,74,.16),rgba(0,0,0,.92) 58%);z-index:20}
+  .card{width:min(760px,100%);max-height:95vh;overflow:auto;border-radius:26px;border:1px solid rgba(217,181,74,.45);background:linear-gradient(180deg,rgba(18,18,28,.98),rgba(5,5,8,.98));padding:30px;text-align:center;box-shadow:0 30px 100px rgba(0,0,0,.7),0 0 80px rgba(217,181,74,.14)}
+  .card h1{margin:0;font-size:clamp(36px,7.5vw,76px);letter-spacing:.11em;color:var(--gold2);text-shadow:0 0 18px rgba(217,181,74,.58)}
+  .card p{color:#d8d8df;line-height:1.7}.rules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}
+  .rule{border-radius:16px;padding:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}
+  .resultGrade{font-size:62px;font-weight:1000;color:var(--gold2);text-shadow:0 0 20px rgba(217,181,74,.65);margin:10px 0}
+  .flash{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:10}.flash.show{animation:flash .35s ease-out}.flash.green{background:rgba(25,230,140,.32)}.flash.red{background:rgba(255,59,79,.34)}.flash.gold{background:rgba(255,230,120,.38)}.flash.blue{background:rgba(108,182,255,.28)}
+  @keyframes flash{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
+  .bonusText{position:fixed;left:50%;top:45%;transform:translate(-50%,-50%) scale(.8);z-index:11;pointer-events:none;opacity:0;font-size:clamp(34px,8vw,92px);font-weight:1000;letter-spacing:.08em;color:#fff;text-shadow:0 0 20px rgba(255,255,255,.85),0 0 48px rgba(217,181,74,.8);white-space:nowrap}
+  .bonusText.show{animation:bonus .8s ease-out}@keyframes bonus{0%{opacity:0;transform:translate(-50%,-50%) scale(.65)}25%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}100%{opacity:0;transform:translate(-50%,-55%) scale(1)}}
+  @media(max-width:860px){body{overflow:auto}.app{height:auto;min-height:100vh}header{display:block}.stats{min-width:0;width:100%;grid-template-columns:repeat(2,1fr);margin-top:10px}main{grid-template-columns:1fr}.chartPanel{height:54vh;min-height:360px}.rules{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="flash" id="flash"></div><div class="bonusText" id="bonusText">BULL RUN</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="card">
+    <h1>THE CANDLE RUSH</h1>
+    <p>Read the Trend. Beat the Market.<br>1秒で1日進む、365日サバイバル株トレード。</p>
+    <div class="rules">
+      <div class="rule"><b>買い</b><br>上がれば利益</div>
+      <div class="rule"><b>売り</b><br>下がれば利益</div>
+      <div class="rule"><b>決済</b><br>ポジションを閉じる</div>
+    </div>
+    <button id="startBtn">START</button>
+    <p style="font-size:12px;color:#9b9ba8">ハイスコアはこのブラウザ内に保存されます。Netlifyでも動きます。</p>
+  </div>
+</div>
+
+<div class="overlay" id="resultOverlay" style="display:none">
+  <div class="card">
+    <h1>RESULT</h1>
+    <div class="resultGrade" id="resultGrade">A</div>
+    <p id="resultText"></p>
+    <div class="rankBox" style="text-align:left;margin-top:14px">
+      <h3>LOCAL RANKING</h3>
+      <ol id="resultRanking"></ol>
+    </div>
+    <button id="restartBtn">RETRY</button>
+  </div>
+</div>
+
+<div class="app">
+  <header>
+    <div class="logo"><h1>THE CANDLE RUSH</h1><div class="sub">Read the Trend. Beat the Market.</div></div>
+    <div class="stats">
+      <div class="stat"><small>DAY</small><b id="day">0 / 365</b></div>
+      <div class="stat"><small>PRICE</small><b id="price">¥100</b></div>
+      <div class="stat"><small>CAPITAL</small><b id="cash">¥30,000</b></div>
+      <div class="stat"><small>ASSET VALUE</small><b id="asset">¥30,000</b></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="chartPanel">
+      <div class="ticker"><span class="pill">TCR</span><span class="pill" id="trend">WAITING</span><span class="pill" id="positionPill">NO POSITION</span></div>
+      <canvas id="chart"></canvas>
+    </section>
+
+    <aside class="sidePanel">
+      <div class="machine">
+        <h2>SLOT SIGNAL</h2>
+        <div class="message" id="message">スタートを押して市場へ。</div>
+        <div class="meter"><span id="heat"></span></div>
+      </div>
+      <div class="buttons">
+        <button id="longBtn">買い</button>
+        <button id="shortBtn">売り</button>
+        <button id="closeBtn">決済</button>
+      </div>
+      <div class="stat"><small>POSITION</small><b id="position">NONE</b></div>
+      <div class="stat"><small>ENTRY PRICE</small><b id="entry">-</b></div>
+      <div class="stat"><small>UNREALIZED P/L</small><b id="unrealized">¥0</b></div>
+      <div class="stat"><small>PROFIT / LOSS</small><b id="profit">¥0</b></div>
+      <div class="rankBox">
+        <h3>HIGH SCORE</h3>
+        <ol id="ranking"></ol>
+        <button id="clearScoresBtn">CLEAR SCORES</button>
+      </div>
+      <div class="log" id="log"></div>
+    </aside>
+  </main>
+
+  <footer><span>THE CANDLE RUSH / Ver 1.1</span><span>BUY / SELL / ENTRY LINE / LOCAL RANKING</span></footer>
+</div>
+
+<script>
+(() => {
+  const canvas=document.getElementById('chart'),ctx=canvas.getContext('2d'),$=id=>document.getElementById(id);
+  const ui={day:$('day'),price:$('price'),cash:$('cash'),asset:$('asset'),profit:$('profit'),message:$('message'),trend:$('trend'),heat:$('heat'),log:$('log'),flash:$('flash'),bonus:$('bonusText'),startOverlay:$('startOverlay'),resultOverlay:$('resultOverlay'),resultText:$('resultText'),resultGrade:$('resultGrade'),position:$('position'),positionPill:$('positionPill'),entry:$('entry'),unrealized:$('unrealized'),ranking:$('ranking'),resultRanking:$('resultRanking'),longBtn:$('longBtn'),shortBtn:$('shortBtn'),closeBtn:$('closeBtn')};
+  const KEY='theCandleRushScoresV1';
+  let audioCtx,candles,day,cash,price,running,timer,drift,volatility,mode,heat,position,entryPrice,units,realized,trades,bestAsset;
+
+  const yen=n=>'¥'+Math.round(n).toLocaleString('ja-JP');
+
+  function posLabel(p){
+    if(p==='LONG') return '買い';
+    if(p==='SHORT') return '売り';
+    return 'NONE';
+  }
+
+  function scores(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+  function saveScore(s){const arr=scores();arr.push(s);arr.sort((a,b)=>b.asset-a.asset);localStorage.setItem(KEY,JSON.stringify(arr.slice(0,10)));renderScores()}
+  function renderScores(){
+    const arr=scores();
+    const html=arr.length?arr.map(s=>`<li>${yen(s.asset)} / ${s.grade} / ${s.date}</li>`).join(''):'<li>まだ記録なし</li>';
+    ui.ranking.innerHTML=html;ui.resultRanking.innerHTML=html;
+  }
+  function grade(asset){
+    const r=asset/30000;
+    if(r>=3.0)return 'S+';
+    if(r>=2.0)return 'S';
+    if(r>=1.5)return 'A';
+    if(r>=1.2)return 'B';
+    if(r>=1.0)return 'C';
+    if(r>=.75)return 'D';
+    return 'E';
+  }
+  function gradeComment(g){
+    return {'S+':'伝説級。市場を完全に支配した。','S':'圧巻。プロトレーダー級。','A':'かなり優秀。波を読めている。','B':'堅実。勝負どころが見えている。','C':'生存成功。まずは市場に勝った。','D':'苦戦。損切りとエントリー精度を磨きたい。','E':'退場寸前。欲望管理から再挑戦。'}[g]||'';
+  }
+  function beep(type='long'){
+    try{
+      audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();
+      const now=audioCtx.currentTime;
+      const seq=type==='long'?[523,659,784]:type==='short'?[784,622,392]:type==='bonus'?[523,659,784,1046]:[180,120,90];
+      seq.forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type==='crash'?'sawtooth':'square';o.frequency.setValueAtTime(f,now+i*.07);g.gain.setValueAtTime(.0001,now+i*.07);g.gain.exponentialRampToValueAtTime(.09,now+i*.07+.015);g.gain.exponentialRampToValueAtTime(.0001,now+i*.07+.06);o.connect(g).connect(audioCtx.destination);o.start(now+i*.07);o.stop(now+i*.07+.07)});
+    }catch(e){}
+  }
+  function reset(){
+    candles=[];day=0;cash=30000;price=100;running=false;drift=.08;volatility=1.4;mode='RANGE';heat=0;position='NONE';entryPrice=0;units=0;realized=0;trades=0;bestAsset=30000;
+    ui.log.innerHTML='';addLog('市場はまだ眠っている。');renderScores();updateUI();resize();draw();
+  }
+  function start(){reset();running=true;ui.startOverlay.style.display='none';ui.resultOverlay.style.display='none';addLog('THE CANDLE RUSH 開始。');timer=setInterval(tick,1000)}
+  function end(reason){
+    running=false;clearInterval(timer);if(position!=='NONE') closePosition(true);
+    const asset=assetValue(),g=grade(asset),record={asset:Math.round(asset),grade:g,date:new Date().toLocaleDateString('ja-JP')};
+    saveScore(record);
+    ui.resultGrade.textContent=g;
+    ui.resultText.innerHTML=`${reason}<br>${gradeComment(g)}<br><br>FINAL ASSET：<b style="color:#fff">${yen(asset)}</b><br>PROFIT / LOSS：<b style="color:${asset>=30000?'#19e68c':'#ff3b4f'}">${yen(asset-30000)}</b><br>TRADES：${trades}`;
+    ui.resultOverlay.style.display='flex';beep(asset>=30000?'bonus':'crash');
+  }
+  function assetValue(){return cash+unrealizedPL()}
+  function unrealizedPL(){if(position==='LONG')return (price-entryPrice)*units;if(position==='SHORT')return (entryPrice-price)*units;return 0}
+  function addLog(text){const div=document.createElement('div');div.textContent=text;ui.log.prepend(div);while(ui.log.children.length>24)ui.log.lastChild.remove()}
+  function flash(color,text){ui.flash.className='flash '+color+' show';ui.bonus.textContent=text;ui.bonus.className='bonusText show';setTimeout(()=>{ui.flash.className='flash';ui.bonus.className='bonusText'},850)}
+  function chooseMode(){const r=Math.random();if(r<.18){mode='BULL RUN';drift=.72;volatility=1.8;flash('green','BULL RUN');beep('bonus');addLog('強い上昇トレンド発生。')}else if(r<.34){mode='MARKET CRASH';drift=-.75;volatility=2.25;flash('red','CRASH');beep('crash');addLog('暴落警戒。市場が荒れている。')}else if(r<.68){mode='RANGE';drift=0;volatility=1.2;addLog('レンジ相場。方向感なし。')}else{mode='TREND';drift=(Math.random()-.5)*.75;volatility=1.55;addLog(drift>0?'じわ上げ気配。':'じわ下げ気配。')}}
+  function tick(){
+    day++;if(day===1||Math.random()<.055)chooseMode();
+    const open=price,meanRevert=(100-price)*.006,momentum=candles.length?(candles[candles.length-1].close-candles[candles.length-1].open)*.13:0;
+    let shock=(Math.random()+Math.random()+Math.random()-1.5)*volatility+drift+meanRevert+momentum;
+    if(Math.random()<.025)shock+=(Math.random()<.5?-1:1)*(5+Math.random()*9);
+    const close=Math.max(5,open+shock),high=Math.max(open,close)+Math.random()*volatility*1.9,low=Math.max(1,Math.min(open,close)-Math.random()*volatility*1.9);
+    price=close;candles.push({open,high,low,close});if(candles.length>90)candles.shift();
+    const change=close-open;heat=Math.min(100,Math.abs(change)*13+volatility*12);
+    if(change>5){flash('green','RUSH');beep('bonus')} if(change<-5){flash('red','DANGER');beep('crash')}
+    bestAsset=Math.max(bestAsset,assetValue());
+    updateUI();draw();
+    if(assetValue()<=0)end('GAME OVER');else if(day>=365)end('365 DAYS COMPLETE');
+  }
+  function enter(type){
+    if(!running)return;
+    if(position!== 'NONE'){addLog('先に「決済」でポジションを閉じてから次へ。');beep('crash');return}
+    units=Math.max(1,Math.floor(cash/price));entryPrice=price;position=type;trades++;
+    addLog(`${type} エントリー：${yen(entryPrice)} / ${units} units`);
+    flash(type==='LONG'?'green':'red',type);beep(type==='LONG'?'long':'short');updateUI();draw();
+  }
+  function closePosition(silent=false){
+    if(position==='NONE'){if(!silent){addLog('決済するポジションがない。');beep('crash')}return}
+    const pl=unrealizedPL();cash+=pl;realized+=pl;
+    addLog(`${position} 決済：${yen(price)} / ${pl>=0?'PROFIT':'LOSS'} ${yen(pl)}`);
+    flash(pl>=0?'gold':'red',pl>=0?'JACKPOT':'LOSS');beep(pl>=0?'bonus':'short');
+    position='NONE';entryPrice=0;units=0;updateUI();draw();
+  }
+  function updateButtons(){ui.longBtn.disabled=!running||position!=='NONE';ui.shortBtn.disabled=!running||position!=='NONE';ui.closeBtn.disabled=!running||position==='NONE'}
+  function updateUI(){
+    const asset=assetValue(),upl=unrealizedPL();
+    ui.day.textContent=`${day} / 365`;ui.price.textContent=yen(price);ui.cash.textContent=yen(cash);ui.asset.textContent=yen(asset);ui.profit.textContent=yen(asset-30000);ui.profit.style.color=asset>=30000?'#19e68c':'#ff3b4f';
+    ui.trend.textContent=mode||'WAITING';ui.heat.style.width=`${Math.min(100,heat||0)}%`;
+    ui.position.textContent=posLabel(position);ui.positionPill.textContent=position==='NONE'?'NO POSITION':posLabel(position);ui.positionPill.style.color=position==='LONG'?'#19e68c':position==='SHORT'?'#ff3b4f':'#fff';
+    ui.entry.textContent=entryPrice?yen(entryPrice):'-';ui.unrealized.textContent=yen(upl);ui.unrealized.style.color=upl>=0?'#19e68c':'#ff3b4f';
+    if(running){ui.message.textContent=position==='NONE'?'ノーポジション。買いか売りで波に乗れ。':`${posLabel(position)}ポジション中。エントリー ${yen(entryPrice)} / 現在 ${yen(price)} / 含み損益 ${yen(upl)}`}
+    updateButtons();
+  }
+  function resize(){const rect=canvas.parentElement.getBoundingClientRect();canvas.width=Math.max(360,Math.floor(rect.width*devicePixelRatio));canvas.height=Math.max(260,Math.floor(rect.height*devicePixelRatio));ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}
+  function draw(){
+    const w=canvas.clientWidth,h=canvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.fillStyle='#07070b';ctx.fillRect(0,0,w,h);
+    ctx.strokeStyle='rgba(255,255,255,.055)';ctx.lineWidth=1;for(let i=0;i<10;i++){const y=40+i*(h-70)/9;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}for(let i=0;i<12;i++){const x=i*w/11;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+    if(!candles.length){ctx.fillStyle='rgba(255,255,255,.28)';ctx.font='700 22px system-ui';ctx.fillText('PRESS START',w/2-74,h/2);return}
+    const candleW=9, gap=5, step=candleW+gap, rightPad=118, leftPad=28;
+    const capacity=Math.max(12, Math.floor((w-leftPad-rightPad)/step));
+    const visible=candles.slice(-capacity);
+    const prices=visible.flatMap(c=>[c.high,c.low, entryPrice||c.close]);
+    const max=Math.max(...prices),min=Math.min(...prices),pad=(max-min)*.12||10,top=max+pad,bottom=Math.max(0,min-pad),yOf=p=>54+(top-p)/(top-bottom)*(h-88);
+    const startX=w-rightPad-(visible.length-1)*step;
+    ctx.strokeStyle='rgba(217,181,74,.35)';ctx.beginPath();
+    const ma=movingAverage(10).slice(-capacity);
+    ma.forEach((v,i)=>{if(v==null)return;const x=startX+i*step,y=yOf(v);if(i===0||ma[i-1]==null)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.stroke();
+    visible.forEach((c,i)=>{const x=startX+i*step,up=c.close>=c.open,color=up?'#19e68c':'#ff3b4f';ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,yOf(c.high));ctx.lineTo(x,yOf(c.low));ctx.stroke();const y1=yOf(c.open),y2=yOf(c.close),y=Math.min(y1,y2),bh=Math.max(2,Math.abs(y2-y1));ctx.fillRect(x-candleW/2,y,candleW,bh);ctx.shadowColor=color;ctx.shadowBlur=7;ctx.fillRect(x-candleW/2,y,candleW,bh);ctx.shadowBlur=0});
+    if(entryPrice&&position!=='NONE'){
+      const y=yOf(entryPrice),color=position==='LONG'?'rgba(25,230,140,.9)':'rgba(255,59,79,.9)';
+      ctx.strokeStyle=color;ctx.setLineDash([10,7]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(12,y-17,150,34);ctx.strokeStyle=color;ctx.strokeRect(12,y-17,150,34);ctx.fillStyle='#fff';ctx.font='800 13px system-ui';ctx.fillText(`${posLabel(position)} ${yen(entryPrice)}`,22,y+5);
+    }
+    const lastY=yOf(price);ctx.strokeStyle='rgba(255,240,166,.8)';ctx.setLineDash([6,6]);ctx.beginPath();ctx.moveTo(0,lastY);ctx.lineTo(w,lastY);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(w-96,lastY-14,88,28);ctx.fillStyle='#fff0a6';ctx.font='800 13px system-ui';ctx.fillText(yen(price),w-88,lastY+5);
+  }
+  function movingAverage(n){return candles.map((_,i)=>{if(i<n-1)return null;let s=0;for(let j=i-n+1;j<=i;j++)s+=candles[j].close;return s/n})}
+  window.addEventListener('resize',()=>{resize();draw()});$('startBtn').addEventListener('click',start);$('restartBtn').addEventListener('click',()=>{ui.resultOverlay.style.display='none';ui.startOverlay.style.display='flex';reset()});$('longBtn').addEventListener('click',()=>enter('LONG'));$('shortBtn').addEventListener('click',()=>enter('SHORT'));$('closeBtn').addEventListener('click',()=>closePosition(false));$('clearScoresBtn').addEventListener('click',()=>{localStorage.removeItem(KEY);renderScores()});
+  window.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='l')enter('LONG');if(e.key.toLowerCase()==='s')enter('SHORT');if(e.key.toLowerCase()==='c')closePosition(false);if(e.key===' '&&!running&&ui.startOverlay.style.display!=='none')start()});
+  reset();
+})();
+</script>
+</body>
+</html>
